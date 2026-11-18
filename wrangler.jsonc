@@ -1,3 +1,4 @@
+
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "ellestia-mail-club",
@@ -7,5 +8,13 @@
     "directory": "./public",
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ellestia-mail-club-db",
+      "database_id": "e9224dcf-af33-4429-bd59-cdc3b80d98dc",
+      "migrations_dir": "migrations"
+    }
+  ]
 }
