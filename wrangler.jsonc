@@ -16,5 +16,13 @@
       "database_id": "e9224dcf-af33-4429-bd59-cdc3b80d98dc",
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+  "previews": {
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_id": "f634ac99-b076-480b-809d-f64bb46bd1d8"
+      }
+    ]
+  }
 }
