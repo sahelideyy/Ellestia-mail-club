@@ -41,8 +41,7 @@ function configured(env) {
   return !!(
     env.RAZORPAY_KEY_ID &&
     env.RAZORPAY_KEY_SECRET &&
-    env.DB &&
-    env.RESEND_API_KEY
+    env.DB
   );
 }
 
@@ -217,7 +216,7 @@ async function verifyPayment(request, env) {
 }
 
 async function razorpayWebhook(request, env) {
-  if (!env.RAZORPAY_WEBHOOK_SECRET || !env.DB || !env.RESEND_API_KEY)
+  if (!env.RAZORPAY_WEBHOOK_SECRET || !env.DB)
     return json({ error: "Webhook is not configured." }, 503);
   const raw = await request.text();
   const signature = request.headers.get("x-razorpay-signature") || "";
@@ -408,6 +407,7 @@ async function sendOrderEmails(order, subscriber, env) {
 }
 
 async function sendEmail(env, message) {
+  if (!env.RESEND_API_KEY) return false;
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
