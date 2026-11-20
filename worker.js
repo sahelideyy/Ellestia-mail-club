@@ -276,6 +276,7 @@ async function finalizePaidOrder(razorOrderId, paymentId, env) {
           .bind(found.subscriber_id)
           .first()
       : null;
+    await syncSubscriberToSheet(found, sub, env);
     return {
       ok: true,
       order: found,
@@ -362,6 +363,7 @@ async function finalizePaidOrder(razorOrderId, paymentId, env) {
       .bind(subscriber.id)
       .first();
   await sendOrderEmails(order, subscriber, env);
+  await syncSubscriberToSheet(order, subscriber, env);
   return {
     ok: true,
     order,
@@ -490,4 +492,31 @@ function json(data, status = 200) {
       "Cache-Control": "no-store",
     },
   });
+}
+async function syncSubscriberToSheet(order, subscriber, env) {
+  if (
+    !env.GOOGLE_SHEET_SYNC_URL ||
+    !env.GOOGLE_SHEET_SYNC_SECRET ||
+    !subscriber ||
+    !subscriber.subscriber_code
+  ) return false;
+
+  try {
+    const response = await fetch(env.GOOGLE_SHEET_SYNC_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret: env.GOOGLE_SHEET_SYNC_SECRET,
+        subscriberId: subscriber.subscriber_code,
+        name: order.customer_name,
+        email: order.customer_email,
+        phone: order.customer_phone,
+        address: order.delivery_address,
+        edition: order.edition,
+      }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
