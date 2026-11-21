@@ -15,11 +15,13 @@ export default {
       });
     }
     if (url.pathname === "/api/diagnostics" && request.method === "GET") {
-      return json({
-        keyIdPresent: !!env.RAZORPAY_KEY_ID,
-        keySecretPresent: !!env.RAZORPAY_KEY_SECRET,
-        databaseBindingPresent: !!env.DB,
-      });
+  return json({
+    keyIdPresent: !!env.RAZORPAY_KEY_ID,
+    keySecretPresent: !!env.RAZORPAY_KEY_SECRET,
+    databaseBindingPresent: !!env.DB,
+    resendKeyPresent: !!env.RESEND_API_KEY,
+    emailFromPresent: !!env.EMAIL_FROM,
+  });
     }
     if (url.pathname === "/api/config" && request.method === "GET") {
       if (!configured(env))
