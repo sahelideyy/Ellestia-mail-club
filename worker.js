@@ -14,6 +14,13 @@ export default {
         mode: env.RAZORPAY_KEY_ID?.startsWith("rzp_live_") ? "live" : "test",
       });
     }
+    if (url.pathname === "/api/diagnostics" && request.method === "GET") {
+      return json({
+        keyIdPresent: !!env.RAZORPAY_KEY_ID,
+        keySecretPresent: !!env.RAZORPAY_KEY_SECRET,
+        databaseBindingPresent: !!env.DB,
+      });
+    }
     if (url.pathname === "/api/config" && request.method === "GET") {
       if (!configured(env))
         return json({ error: "Checkout is not configured yet." }, 503);
