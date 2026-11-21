@@ -418,7 +418,11 @@ async function sendOrderEmails(order, subscriber, env) {
 }
 
 async function sendEmail(env, message) {
-  if (!env.RESEND_API_KEY) return false;
+  if (!env.RESEND_API_KEY) {
+    console.error("RESEND_ERROR: API key missing");
+    return false;
+  }
+
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -434,8 +438,18 @@ async function sendEmail(env, message) {
         reply_to: SUPPORT_EMAIL,
       }),
     });
-    return response.ok;
-  } catch {
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("RESEND_ERROR:", response.status, errorText);
+      return false;
+    }
+
+    const result = await response.json();
+    console.log("RESEND_SUCCESS:", result.id);
+    return true;
+  } catch (error) {
+    console.error("RESEND_EXCEPTION:", String(error));
     return false;
   }
 }
