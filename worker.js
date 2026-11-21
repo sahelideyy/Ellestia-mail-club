@@ -431,7 +431,7 @@ async function sendEmail(env, message) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: env.EMAIL_FROM || "Ellestia Mail Club <orders@ellestia.co>",
+        from: env.EMAIL_FROM || "Ellestia Mail Club <orders@ellestia.co.in>",
         to: [message.to],
         subject: message.subject,
         html: message.html,
