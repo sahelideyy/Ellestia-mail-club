@@ -1,5 +1,5 @@
 const PRICE_PAISE = 49900;
-const EDITION = "January 2027 — The Underground Sky";
+const EDITION = "January 2027 — The Verona Edition";
 const BUSINESS_EMAIL = "sahelideybusiness@gmail.com";
 const SUPPORT_EMAIL = "ellestia.co@gmail.com";
 const BRAND = "Ellestia Mail Club";
