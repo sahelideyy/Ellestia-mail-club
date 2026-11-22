@@ -7,6 +7,12 @@ const BRAND = "Ellestia Mail Club";
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/admin" && request.method === "GET")
+  return adminPage(request, env);
+if (url.pathname === "/api/admin/login" && request.method === "POST")
+  return adminLogin(request, env);
+if (url.pathname === "/api/admin/stats" && request.method === "GET")
+  return adminStats(request, env);
     if (url.pathname === "/api/health" && request.method === "GET") {
       return json({
         ok: true,
