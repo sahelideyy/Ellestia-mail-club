@@ -6,7 +6,7 @@
 
   "vars": {
     "EMAIL_FROM": "Ellestia Mail Club <orders@ellestia.co.in>",
-    "RAZORPAY_KEY_ID": "rzp_test_U1RX8mfcF7oedF"
+    "RAZORPAY_KEY_ID": "rzp_live_U3EF2rro7oPZdg"
   },
 
   "assets": {
