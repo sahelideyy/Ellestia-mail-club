@@ -549,3 +549,176 @@ async function syncSubscriberToSheet(order, subscriber, env) {
     return false;
   }
 }
+// ---- Private Ellestia Admin Dashboard ----
+
+function adminPage(request, env) {
+  return new Response(`<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ellestia Admin</title>
+<style>
+body{margin:0;padding:24px;background:#f5eee7;color:#49352c;font-family:Arial,sans-serif}
+main{max-width:600px;margin:auto}
+h1{font-family:Georgia,serif}
+.card{background:white;padding:22px;border-radius:16px;margin:14px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.number{font-size:28px;font-weight:bold;margin-top:12px}
+input,button{box-sizing:border-box;width:100%;padding:14px;margin-top:12px;border-radius:10px;border:1px solid #ddd}
+button{background:#6b2838;color:white;border:0;font-weight:bold}
+</style>
+</head>
+<body>
+<main>
+<h1>Ellestia Mail Club</h1>
+<p>Private Dashboard</p>
+
+<div class="card" id="login">
+<h3>Admin Login</h3>
+<input type="password" id="password" placeholder="Admin password">
+<button onclick="login()">Login</button>
+<p id="error"></p>
+</div>
+
+<div id="dashboard" style="display:none">
+<div class="grid">
+<div class="card"><div>Edition Subscribers</div><div class="number" id="subs">—</div></div>
+<div class="card"><div>Edition Revenue</div><div class="number" id="editionRevenue">—</div></div>
+<div class="card"><div>Lifetime Subscribers</div><div class="number" id="lifeSubs">—</div></div>
+<div class="card"><div>Lifetime Revenue</div><div class="number" id="lifeRevenue">—</div></div>
+</div>
+<button onclick="loadStats()">Refresh</button>
+<button onclick="logout()">Logout</button>
+</div>
+</main>
+
+<script>
+async function login(){
+ const p=document.getElementById('password').value;
+ const r=await fetch('/api/admin/login',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({password:p})
+ });
+ if(r.ok){
+  document.getElementById('login').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  loadStats();
+ }else{
+  document.getElementById('error').textContent='Incorrect password.';
+ }
+}
+
+async function loadStats(){
+ const r=await fetch('/api/admin/stats');
+ if(r.status===401){
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('login').style.display='block';
+  return;
+ }
+ if(!r.ok){
+  document.getElementById('error').textContent='Could not load statistics.';
+  return;
+ }
+ const d=await r.json();
+ document.getElementById('subs').textContent=d.editionSubscribers;
+ document.getElementById('editionRevenue').textContent='₹'+d.editionRevenue.toLocaleString('en-IN');
+ document.getElementById('lifeSubs').textContent=d.lifetimeSubscribers;
+ document.getElementById('lifeRevenue').textContent='₹'+d.lifetimeRevenue.toLocaleString('en-IN');
+}
+
+async function logout(){
+ await fetch('/api/admin/login',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({action:'logout'})
+ });
+ location.reload();
+}
+</script>
+</body>
+</html>`, {
+    headers: {
+      "Content-Type": "text/html;charset=UTF-8",
+      "Cache-Control": "no-store"
+    }
+  });
+}
+
+async function adminLogin(request, env) {
+  if (!env.ADMIN_PASSWORD)
+    return json({error:"Admin password is not configured"},503);
+
+  let body;
+  try {
+    body=await request.json();
+  } catch {
+    return json({error:"Invalid request"},400);
+  }
+
+  if (body.action==="logout") {
+    return new Response(JSON.stringify({ok:true}),{
+      headers:{
+        "Content-Type":"application/json",
+        "Set-Cookie":"ellestia_admin=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0",
+        "Cache-Control":"no-store"
+      }
+    });
+  }
+
+  if (!constantTimeEqual(String(body.password||""),env.ADMIN_PASSWORD))
+    return json({error:"Unauthorized"},401);
+
+  const timestamp=String(Date.now());
+  const signature=await hmacHex(env.ADMIN_PASSWORD,timestamp);
+
+  return new Response(JSON.stringify({ok:true}),{
+    headers:{
+      "Content-Type":"application/json",
+      "Cache-Control":"no-store",
+      "Set-Cookie":`ellestia_admin=${timestamp}.${signature}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=43200`
+    }
+  });
+}
+
+async function adminStats(request, env) {
+  if (!env.ADMIN_PASSWORD || !env.DB)
+    return json({error:"Not configured"},503);
+
+  const cookie=request.headers.get("Cookie")||"";
+  const match=cookie.match(/ellestia_admin=([0-9]+)\.([a-f0-9]+)/);
+
+  if (!match)
+    return json({error:"Unauthorized"},401);
+
+  const timestamp=match[1];
+  const signature=match[2];
+  const age=Date.now()-Number(timestamp);
+
+  if (age<0 || age>43200000)
+    return json({error:"Unauthorized"},401);
+
+  const expected=await hmacHex(env.ADMIN_PASSWORD,timestamp);
+
+  if (!constantTimeEqual(expected,signature))
+    return json({error:"Unauthorized"},401);
+
+  const current=await env.DB.prepare(
+    "SELECT COUNT(DISTINCT phone_normalized) AS subscribers, COALESCE(SUM(amount_paise),0) AS revenue FROM orders WHERE payment_status='paid' AND edition=?"
+  ).bind(EDITION).first();
+
+  const lifetime=await env.DB.prepare(
+    "SELECT COUNT(*) AS subscribers FROM subscribers"
+  ).first();
+
+  const totalRevenue=await env.DB.prepare(
+    "SELECT COALESCE(SUM(amount_paise),0) AS revenue FROM orders WHERE payment_status='paid'"
+  ).first();
+
+  return json({
+    editionSubscribers:current.subscribers||0,
+    editionRevenue:(current.revenue||0)/100,
+    lifetimeSubscribers:lifetime.subscribers||0,
+    lifetimeRevenue:(totalRevenue.revenue||0)/100
+  });
+}
